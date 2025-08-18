@@ -27,6 +27,8 @@ def options():
     parser.add_argument('--fps', type=float, help='Can be specified only if input is a static image (default: 25)', default=25., required=False)
     parser.add_argument('--pads', nargs='+', type=int, default=[0, 20, 0, 0], help='Padding (top, bottom, left, right). Please adjust to include chin at least')
     parser.add_argument('--face_det_batch_size', type=int, help='Batch size for face detection', default=4)
+    parser.add_argument('--face_detector', type=str, default='sfd', choices=['sfd', 'yolov8', 'yolov8_finetuned'], 
+                        help='Face detector to use. Options: sfd (default), yolov8, yolov8_finetuned')
     parser.add_argument('--LNet_batch_size', type=int, help='Batch size for LNet', default=16)
     parser.add_argument('--img_size', type=int, default=384)
     parser.add_argument('--crop', nargs='+', type=int, default=[0, -1, 0, -1], 
@@ -108,8 +110,9 @@ def get_smoothened_boxes(boxes, T):
 def face_detect(images, args, jaw_correction=False, detector=None):
     if detector == None:
         device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+        face_detector_type = getattr(args, 'face_detector', 'sfd')  # Default to sfd, support yolov8
         detector = face_detection.FaceAlignment(face_detection.LandmarksType._2D, 
-                                                flip_input=False, device=device)
+                                                flip_input=False, device=device, face_detector=face_detector_type)
 
     batch_size = args.face_det_batch_size    
     while 1:
