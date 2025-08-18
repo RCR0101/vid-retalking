@@ -23,7 +23,13 @@ def load_checkpoint(path, model):
     return model
 
 def load_network(args):
-    L_net = LNet()
+    # Create LNet with temporal attention arguments
+    L_net = LNet(
+        use_temporal_attention=getattr(args, 'use_temporal_attention', False),
+        attention_heads=getattr(args, 'attention_heads', 16),
+        max_temporal_len=getattr(args, 'max_temporal_len', 32),
+        enhanced_transformer=getattr(args, 'enhanced_transformer', False)
+    )
     L_net = load_checkpoint(args.LNet_path, L_net)
     E_net = ENet(lnet=L_net)
     model = load_checkpoint(args.ENet_path, E_net)

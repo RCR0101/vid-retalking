@@ -2,15 +2,18 @@ import functools
 import torch
 import torch.nn as nn
 
-from models.transformer import RETURNX, Transformer
+from models.transformer import RETURNX, Transformer, TemporalTransformer, EnhancedTransformer
 from models.base_blocks import Conv2d, LayerNorm2d, FirstBlock2d, DownBlock2d, UpBlock2d, \
                                FFCADAINResBlocks, Jump, FinalBlock2d
 
 
 class Visual_Encoder(nn.Module):
-    def __init__(self, image_nc, ngf, img_f, layers, norm_layer=nn.BatchNorm2d, nonlinearity=nn.LeakyReLU(), use_spect=False):
+    def __init__(self, image_nc, ngf, img_f, layers, norm_layer=nn.BatchNorm2d, nonlinearity=nn.LeakyReLU(), use_spect=False,
+                 use_temporal_attention=False, attention_heads=16, max_temporal_len=32, enhanced_transformer=False):
         super(Visual_Encoder, self).__init__()
         self.layers = layers
+        self.use_temporal_attention = use_temporal_attention
+        self.enhanced_transformer = enhanced_transformer
         self.first_inp = FirstBlock2d(image_nc, ngf, norm_layer, nonlinearity, use_spect)
         self.first_ref = FirstBlock2d(image_nc, ngf, norm_layer, nonlinearity, use_spect)
         for i in range(layers):
@@ -21,7 +24,29 @@ class Visual_Encoder(nn.Module):
             if i < 2:
                 ca_layer = RETURNX()
             else:
-                ca_layer = Transformer(2**(i+1) * ngf,2,4,ngf,ngf*4)
+                # Choose transformer type based on arguments
+                transformer_dim = 2**(i+1) * ngf
+                if use_temporal_attention:
+                    ca_layer = TemporalTransformer(
+                        dim=transformer_dim, 
+                        depth=2, 
+                        heads=attention_heads, 
+                        dim_head=ngf,
+                        mlp_dim=ngf*4,
+                        use_temporal_attention=True,
+                        max_temporal_len=max_temporal_len
+                    )
+                elif enhanced_transformer:
+                    ca_layer = EnhancedTransformer(
+                        dim=transformer_dim, 
+                        depth=2, 
+                        heads=attention_heads, 
+                        dim_head=ngf,
+                        mlp_dim=ngf*4
+                    )
+                else:
+                    # Original transformer
+                    ca_layer = Transformer(transformer_dim, 2, 4, ngf, ngf*4)
             setattr(self, 'ca' + str(i), ca_layer)
             setattr(self, 'ref_down' + str(i), model_ref)
             setattr(self, 'inp_down' + str(i), model_inp)
@@ -88,7 +113,11 @@ class LNet(nn.Module):
         num_res_blocks=9, 
         use_spect=True,
         encoder=Visual_Encoder,
-        decoder=Decoder
+        decoder=Decoder,
+        use_temporal_attention=False,
+        attention_heads=16,
+        max_temporal_len=32,
+        enhanced_transformer=False
         ):  
         super(LNet, self).__init__()
 
@@ -97,7 +126,16 @@ class LNet(nn.Module):
         kwargs = {'norm_layer':norm_layer, 'nonlinearity':nonlinearity, 'use_spect':use_spect}
         self.descriptor_nc = descriptor_nc
 
-        self.encoder = encoder(image_nc, base_nc, max_nc, layer, **kwargs)
+        # Add temporal attention parameters to encoder kwargs
+        encoder_kwargs = kwargs.copy()
+        encoder_kwargs.update({
+            'use_temporal_attention': use_temporal_attention,
+            'attention_heads': attention_heads,
+            'max_temporal_len': max_temporal_len,
+            'enhanced_transformer': enhanced_transformer
+        })
+
+        self.encoder = encoder(image_nc, base_nc, max_nc, layer, **encoder_kwargs)
         self.decoder = decoder(image_nc, self.descriptor_nc, base_nc, max_nc, layer, num_res_blocks, **kwargs)
         self.audio_encoder = nn.Sequential(
             Conv2d(1, 32, kernel_size=3, stride=1, padding=1),

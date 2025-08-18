@@ -47,6 +47,16 @@ def options():
     parser.add_argument('--tmp_dir', type=str, default='temp', help='Folder to save tmp results')
     parser.add_argument('--re_preprocess', action='store_true')
     
+    # Temporal attention arguments
+    parser.add_argument('--use_temporal_attention', action='store_true', default=False,
+                        help='Use temporal-aware cross-attention in transformer layers')
+    parser.add_argument('--attention_heads', type=int, default=16, 
+                        help='Number of attention heads for enhanced transformers (default: 16, original: 8)')
+    parser.add_argument('--max_temporal_len', type=int, default=32,
+                        help='Maximum temporal sequence length for temporal attention')
+    parser.add_argument('--enhanced_transformer', action='store_true', default=False,
+                        help='Use enhanced transformer with more attention heads instead of original')
+    
     args = parser.parse_args()
     return args
 
