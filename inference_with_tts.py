@@ -25,7 +25,7 @@ from utils.ffhq_preprocess import Croper
 from utils.alignment_stit import crop_faces, calc_alignment_coefficients, paste_image
 from utils.inference_utils import Laplacian_Pyramid_Blending_with_mask, face_detect, load_model, options, split_coeff, \
                                   trans_image, transform_semantic, find_crop_norm_ratio, load_face3d_net, exp_aus_dict
-from utils.qwen_tts import text_to_audio
+from utils.opensource_tts import text_to_audio
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -44,9 +44,15 @@ def create_parser():
     parser.add_argument('--face', type=str, help='Filepath of video/image that contains faces to use', required=True)
     parser.add_argument('--audio', type=str, help='Filepath of video/audio file to use as raw audio source')
     parser.add_argument('--text', type=str, help='Text to convert to speech using Qwen TTS')
-    parser.add_argument('--tts_voice', type=str, default='Dylan', 
-                        choices=['Cherry', 'Ethan', 'Chelsie', 'Serena', 'Dylan', 'Jada', 'Sunny'], 
-                        help='Voice for TTS synthesis (default: Dylan)')
+    parser.add_argument('--tts_voice', type=str, default='female_1', 
+                        choices=['female_1', 'male_1', 'female_2', 'male_2', 'custom'], 
+                        help='Voice for TTS synthesis (default: female_1)')
+    parser.add_argument('--speaker_wav', type=str, help='Path to speaker audio file for voice cloning (XTTS only)')
+    parser.add_argument('--language', type=str, default='en', 
+                        choices=['en', 'es', 'fr', 'de', 'it', 'pt', 'pl', 'tr', 'ru', 'nl', 'cs', 'ar', 'zh-cn', 'ja', 'hu', 'ko'],
+                        help='Language for TTS synthesis (default: en)')
+    parser.add_argument('--tts_model', type=str, default='tts_models/multilingual/multi-dataset/xtts_v2',
+                        help='TTS model to use (default: XTTS-v2)')
     
     # Expression and output
     parser.add_argument('--exp_img', type=str, help='Expression template. neutral, smile or image path', default='neutral')
@@ -100,15 +106,23 @@ def main():
     
     # Handle TTS if text is provided
     if args.text:
-        print(f'[TTS] Converting text to speech using voice: {args.tts_voice}')
+        print(f'[TTS] Converting text to speech using voice: {args.tts_voice}, language: {args.language}')
         try:
             # Create temporary audio file from text
             temp_audio_path = os.path.join('temp', args.tmp_dir, 'tts_audio.wav')
-            args.audio = text_to_audio(args.text, voice=args.tts_voice, output_path=temp_audio_path)
+            args.audio = text_to_audio(
+                text=args.text, 
+                voice=args.tts_voice, 
+                speaker_wav=args.speaker_wav,
+                language=args.language,
+                output_path=temp_audio_path,
+                model_name=args.tts_model
+            )
             print(f'[TTS] Audio generated: {args.audio}')
         except Exception as e:
             print(f'[Error] TTS failed: {str(e)}')
-            print('[Info] Please ensure DASHSCOPE_API_KEY is set in your environment')
+            print('[Info] Make sure you have installed: pip install TTS')
+            print('[Info] For voice cloning, provide --speaker_wav with a 3+ second audio sample')
             return
 
     enhancer = FaceEnhancement(base_dir='checkpoints', size=512, model='GPEN-BFR-512', use_sr=False, \

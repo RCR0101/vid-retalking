@@ -1,34 +1,43 @@
 #!/usr/bin/env python3
 """
-Test script for Qwen TTS integration
+Test script for Open-Source TTS integration
 Tests the TTS module independently before full pipeline testing
 """
 
 import os
 import sys
-from utils.qwen_tts import QwenTTS, text_to_audio
+from utils.opensource_tts import OpenSourceTTS, text_to_audio
 
-def test_api_key():
-    """Test if API key is available"""
-    api_key = os.getenv('DASHSCOPE_API_KEY')
-    if not api_key:
-        print("❌ DASHSCOPE_API_KEY not found in environment variables")
-        print("Please set your API key: export DASHSCOPE_API_KEY=your_api_key")
+def test_tts_installation():
+    """Test if TTS is installed properly"""
+    try:
+        import TTS
+        print("✅ Coqui TTS is installed")
+        print(f"TTS version: {TTS.__version__}")
+        return True
+    except ImportError:
+        print("❌ Coqui TTS not installed")
+        print("Please install: pip install TTS")
         return False
-    
-    print(f"✅ API key found: {api_key[:10]}...")
-    return True
+    except Exception as e:
+        print(f"❌ TTS import error: {e}")
+        return False
 
 def test_tts_class():
-    """Test QwenTTS class functionality"""
+    """Test OpenSourceTTS class functionality"""
     try:
-        print("🔧 Testing QwenTTS class initialization...")
-        tts = QwenTTS()
+        print("🔧 Testing OpenSourceTTS class initialization...")
+        print("Note: First run will download the XTTS-v2 model (~1GB)")
+        tts = OpenSourceTTS()
         
         print("📋 Available voices:")
         voices = tts.list_voices()
         for voice, description in voices.items():
             print(f"  - {voice}: {description}")
+        
+        print("🌍 Supported languages:")
+        languages = tts.list_languages()
+        print(f"  {', '.join(languages)}")
         
         return tts
     except Exception as e:
@@ -37,15 +46,17 @@ def test_tts_class():
 
 def test_tts_synthesis(tts):
     """Test actual TTS synthesis"""
-    test_text = "Hello, this is a test of Qwen TTS integration."
+    test_text = "Hello, this is a test of open-source TTS integration."
     
     try:
         print(f"🎤 Testing TTS synthesis...")
         print(f"Text: {test_text}")
+        print("Note: This will use a built-in voice since no speaker file is provided")
         
         audio_path = tts.synthesize(
             text=test_text,
-            voice="Dylan",
+            voice="female_1",
+            language="en",
             output_path="temp_tts_test.wav"
         )
         
@@ -65,6 +76,8 @@ def test_tts_synthesis(tts):
             
     except Exception as e:
         print(f"❌ TTS synthesis failed: {e}")
+        print("Note: XTTS requires a speaker audio file for voice cloning")
+        print("For testing without speaker file, try a different TTS model")
         return False
 
 def test_convenience_function():
@@ -73,8 +86,9 @@ def test_convenience_function():
         print("🎯 Testing convenience function...")
         
         audio_path = text_to_audio(
-            "Testing convenience function",
-            voice="Cherry",
+            text="Testing convenience function",
+            voice="male_1",
+            language="en",
             output_path="temp_convenience_test.wav"
         )
         
@@ -93,15 +107,15 @@ def test_convenience_function():
 
 def main():
     """Run all tests"""
-    print("🧪 Qwen TTS Integration Test Suite")
+    print("🧪 Open-Source TTS Integration Test Suite")
     print("=" * 40)
     
     tests_passed = 0
     total_tests = 4
     
-    # Test 1: API Key
-    print("\n[Test 1/4] Checking API Key...")
-    if test_api_key():
+    # Test 1: TTS Installation
+    print("\n[Test 1/4] Checking TTS Installation...")
+    if test_tts_installation():
         tests_passed += 1
     
     # Test 2: TTS Class
@@ -137,9 +151,10 @@ def main():
         
         if tests_passed == 0:
             print("\n💡 Troubleshooting tips:")
-            print("- Ensure DASHSCOPE_API_KEY is set correctly")
-            print("- Check internet connection")
-            print("- Verify API key is valid and has quota")
+            print("- Install TTS: pip install TTS")
+            print("- Ensure you have sufficient disk space (~1GB for XTTS model)")
+            print("- Check internet connection for model download")
+            print("- For voice cloning, provide a 3+ second speaker audio file")
 
 if __name__ == "__main__":
     main()

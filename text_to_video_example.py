@@ -22,10 +22,13 @@ import sys
 def check_requirements():
     """Check if all requirements are met"""
     
-    # Check API key
-    if not os.getenv('DASHSCOPE_API_KEY'):
-        print("❌ Error: DASHSCOPE_API_KEY environment variable not set")
-        print("Please set your Qwen API key: export DASHSCOPE_API_KEY=your_api_key")
+    # Check TTS installation
+    try:
+        import TTS
+        print("✅ Coqui TTS is installed")
+    except ImportError:
+        print("❌ Error: Coqui TTS not installed")
+        print("Please install: pip install TTS")
         return False
     
     # Check if example video exists
@@ -63,15 +66,17 @@ def run_text_to_video_example():
     """Run the text-to-video example"""
     
     # Example configuration
-    text = "Hello! This is a demonstration of the Qwen TTS integration with video retalking."
+    text = "Hello! This is a demonstration of the open-source TTS integration with video retalking."
     input_video = "examples/face/1.mp4"
     output_video = "results/text_to_video_output.mp4"
-    voice = "Dylan"  # Options: Cherry, Ethan, Chelsie, Serena, Dylan, Jada, Sunny
+    voice = "female_1"  # Options: female_1, male_1, female_2, male_2, custom
+    language = "en"     # Supported: en, es, fr, de, it, pt, pl, tr, ru, nl, cs, ar, zh-cn, ja, hu, ko
     
     print(f"🎬 Running Text-to-Video Pipeline")
     print(f"📝 Text: {text}")
     print(f"🎥 Input video: {input_video}")
     print(f"🔊 TTS Voice: {voice}")
+    print(f"🌍 Language: {language}")
     print(f"💾 Output: {output_video}")
     print()
     
@@ -84,6 +89,7 @@ def run_text_to_video_example():
         "--face", input_video,
         "--text", text,
         "--tts_voice", voice,
+        "--language", language,
         "--outfile", output_video
     ]
     
@@ -120,23 +126,32 @@ def show_usage_examples():
     print('   python inference_with_tts.py --face video.mp4 --text "Hello world" --outfile output.mp4')
     print()
     
-    print("2. With different voice:")
-    print('   python inference_with_tts.py --face video.mp4 --text "Hello" --tts_voice Cherry --outfile output.mp4')
+    print("2. With different voice and language:")
+    print('   python inference_with_tts.py --face video.mp4 --text "Hola mundo" --tts_voice male_1 --language es --outfile output.mp4')
     print()
     
-    print("3. Traditional audio input (still supported):")
+    print("3. Voice cloning with custom speaker:")
+    print('   python inference_with_tts.py --face video.mp4 --text "Hello" --tts_voice custom --speaker_wav speaker.wav --outfile output.mp4')
+    print()
+    
+    print("4. Traditional audio input (still supported):")
     print('   python inference_with_tts.py --face video.mp4 --audio audio.wav --outfile output.mp4')
     print()
     
-    print("4. Available TTS voices:")
-    voices = ["Cherry", "Ethan", "Chelsie", "Serena", "Dylan", "Jada", "Sunny"]
+    print("5. Available TTS voices:")
+    voices = ["female_1", "male_1", "female_2", "male_2", "custom (requires --speaker_wav)"]
     for voice in voices:
         print(f"   - {voice}")
+    print()
+    
+    print("6. Supported languages:")
+    languages = ["en", "es", "fr", "de", "it", "pt", "pl", "tr", "ru", "nl", "cs", "ar", "zh-cn", "ja", "hu", "ko"]
+    print(f"   {', '.join(languages)}")
     print()
 
 
 def main():
-    print("🎯 Qwen TTS + Video Retalking Integration")
+    print("🎯 Open-Source TTS + Video Retalking Integration")
     print("=" * 50)
     
     if len(sys.argv) > 1 and sys.argv[1] == "--examples":
