@@ -1,14 +1,20 @@
-# Open-Source TTS Integration for Video Retalking
+# Text-to-Speech + Video Retalking Workflow
 
-This integration allows you to create lip-synced videos directly from text input using open-source Text-to-Speech (TTS) models, eliminating the need for pre-recorded audio files or API keys.
+This guide shows how to use the standalone TTS script to generate audio, then use that audio with the video-retalking system. The TTS and video-retalking components are completely separate, avoiding dependency conflicts.
 
-## Features
+## Workflow Overview
 
-- **Text-to-Speech**: Convert any text to high-quality speech using Coqui TTS
-- **Voice Cloning**: Clone any voice from just 3 seconds of audio (XTTS-v2)
-- **17 Languages**: Multi-language support including English, Spanish, French, German, Italian, Portuguese, and more
+1. **Step 1**: Use standalone TTS script to generate audio from text
+2. **Step 2**: Use generated audio with video-retalking system
+3. **Result**: Lip-synced video with speech from your text
+
+## Benefits
+
+- **Clean Separation**: No dependency conflicts between TTS and video-retalking
+- **Voice Cloning**: Clone any voice from just 3 seconds of audio
+- **17 Languages**: Multi-language support 
 - **No API Keys**: Completely free and runs locally
-- **Multiple Models**: Choose from various TTS models based on your needs
+- **Flexible**: Use any audio source with video-retalking
 
 ## Available Voice Options
 
@@ -26,141 +32,127 @@ English (en), Spanish (es), French (fr), German (de), Italian (it), Portuguese (
 
 ## Setup
 
-### 1. Install Dependencies
+### 1. Setup TTS Environment
 
 ```bash
-pip install TTS torch torchaudio
+cd standalone_tts/
+pip install -r requirements.txt
 ```
 
-**Note**: First run will automatically download the XTTS-v2 model (~1GB). Ensure you have sufficient disk space and internet connection.
+**Note**: First run will download the XTTS-v2 model (~1GB).
 
-### 2. Download Model Checkpoints
+### 2. Setup Video-Retalking Environment
+
+```bash
+cd ../  # Back to main directory
+pip install -r requirements.txt
+```
 
 Ensure you have the required model checkpoints in the `checkpoints/` directory:
-- `DNet.pt`
-- `LNet.pth`
-- `ENet.pth`
-- `face3d_pretrain_epoch_20.pth`
-- `GFPGANv1.3.pth`
-- `shape_predictor_68_face_landmarks.dat`
+- `DNet.pt`, `LNet.pth`, `ENet.pth`, `face3d_pretrain_epoch_20.pth`
+- `GFPGANv1.3.pth`, `shape_predictor_68_face_landmarks.dat`
 
 ## Usage
 
-### Basic Text-to-Video
+### Complete Workflow
 
+**Step 1: Generate Audio**
 ```bash
-python inference_with_tts.py \
-    --face input_video.mp4 \
-    --text "Hello! This is a text-to-speech demonstration." \
-    --tts_voice female_1 \
-    --language en \
-    --outfile output_with_tts.mp4
+cd standalone_tts/
+python text_to_speech.py --text "Hello! This is a demonstration." --output ../generated_audio.wav
 ```
 
-### With Voice Cloning
-
+**Step 2: Create Video**
 ```bash
-python inference_with_tts.py \
-    --face person.mp4 \
+cd ../
+python inference.py --face input_video.mp4 --audio generated_audio.wav --outfile result.mp4
+```
+
+### Voice Cloning Workflow
+
+**Step 1: Generate Audio with Voice Cloning**
+```bash
+cd standalone_tts/
+python text_to_speech.py \
     --text "Hello! I'm speaking with a cloned voice." \
-    --tts_voice custom \
     --speaker_wav speaker_sample.wav \
-    --language en \
-    --outfile cloned_voice_output.mp4
+    --output ../cloned_audio.wav
 ```
 
-### Multi-language Support
-
+**Step 2: Create Video**
 ```bash
-python inference_with_tts.py \
-    --face person.mp4 \
+cd ../
+python inference.py --face input_video.mp4 --audio cloned_audio.wav --outfile cloned_result.mp4
+```
+
+### Multi-language Workflow
+
+**Step 1: Generate Spanish Audio**
+```bash
+cd standalone_tts/
+python text_to_speech.py \
     --text "Hola, esto es una demostración en español." \
-    --tts_voice male_1 \
     --language es \
-    --outfile spanish_output.mp4
+    --output ../spanish_audio.wav
 ```
 
-### Run Example Script
+**Step 2: Create Video**
+```bash
+cd ../
+python inference.py --face input_video.mp4 --audio spanish_audio.wav --outfile spanish_result.mp4
+```
+
+## Command Line Reference
+
+### TTS Script Options
 
 ```bash
-python text_to_video_example.py
+cd standalone_tts/
+python text_to_speech.py [OPTIONS]
 ```
 
-## API Reference
+**Required Arguments:**
+- `--text "Your text here"` - Text to synthesize
+- `--output path/to/output.wav` - Output audio file
 
-### OpenSourceTTS Class
+**Optional Arguments:**
+- `--language en` - Language code (default: en)
+- `--speaker_wav speaker.wav` - Speaker audio for voice cloning
+- `--model xtts` - Model type (xtts or simple)
+- `--device cuda` - Device to use (cuda or cpu)
 
-```python
-from utils.opensource_tts import OpenSourceTTS
+### Video-Retalking Options
 
-# Initialize TTS
-tts = OpenSourceTTS()  # Uses XTTS-v2 by default
-
-# Generate speech with voice cloning
-audio_path = tts.synthesize(
-    text="Hello world",
-    voice="custom",
-    speaker_wav="speaker.wav",
-    language="en",
-    output_path="output.wav"
-)
-
-# List available voices and languages
-voices = tts.list_voices()
-languages = tts.list_languages()
+```bash
+python inference.py [OPTIONS]
 ```
 
-### Convenience Function
+**Key Arguments:**
+- `--face input_video.mp4` - Input video file
+- `--audio generated_audio.wav` - Audio file (from TTS)
+- `--outfile result.mp4` - Output video file
 
-```python
-from utils.opensource_tts import text_to_audio
+## Directory Structure
 
-# Simple text-to-audio conversion
-audio_path = text_to_audio(
-    text="Hello world", 
-    voice="female_1",
-    language="en"
-)
-
-# With voice cloning
-audio_path = text_to_audio(
-    text="Hello world",
-    voice="custom",
-    speaker_wav="speaker.wav",
-    language="en"
-)
 ```
-
-### Simple TTS (Lightweight Alternative)
-
-```python
-from utils.simple_tts import simple_text_to_audio
-
-# Quick setup with lighter model (English only)
-audio_path = simple_text_to_audio("Hello world")
-```
-
-## Command Line Arguments
-
-| Argument | Description | Default | Options |
-|----------|-------------|---------|---------|
-| `--text` | Text to convert to speech | Required if no `--audio` | Any text |
-| `--audio` | Audio file path | Required if no `--text` | Path to audio file |
-| `--tts_voice` | TTS voice preset | female_1 | female_1, male_1, female_2, male_2, custom |
-| `--speaker_wav` | Speaker audio for cloning | None | Path to 3+ second audio file |
-| `--language` | Language code | en | en, es, fr, de, it, pt, pl, tr, ru, nl, cs, ar, zh-cn, ja, hu, ko |
-| `--tts_model` | TTS model to use | xtts_v2 | Any supported TTS model |
-| `--face` | Input video/image path | Required | Path to video/image |
-| `--outfile` | Output video path | results/output_with_tts.mp4 | Output path |
-
-All other arguments from the original inference script are supported.
+video-retalking/
+├── standalone_tts/           # TTS Environment
+│   ├── text_to_speech.py    # Main TTS script
+│   ├── requirements.txt     # TTS dependencies
+│   └── README.md           # TTS documentation
+├── inference.py            # Video-retalking script
+├── requirements.txt        # Video-retalking dependencies
+├── models/                 # Neural network models
+├── utils/                  # Utility functions
+├── third_part/            # Third-party code
+└── examples/              # Sample videos/audio
 
 ## Pipeline Flow
 
-1. **Text Input**: Provide text via `--text` parameter
-2. **TTS Generation**: Text is converted to speech using Qwen TTS
-3. **Audio Processing**: Generated audio is processed for lip sync
-4. **Video Processing**: Original video retalking pipeline processes the video
+1. **Text Input**: Provide text to standalone TTS script
+2. **TTS Generation**: Text is converted to speech and saved as WAV file
+3. **Audio Input**: Generated WAV file is passed to video-retalking
+4. **Video Processing**: Video-retalking processes video with audio
 5. **Output**: Final lip-synced video is saved
 
 ## Error Handling
@@ -195,35 +187,54 @@ CUDA out of memory
 
 ## Examples
 
-### English Text
+### English Example
 ```bash
-python inference_with_tts.py \
-    --face examples/face/1.mp4 \
+# Step 1: Generate English audio
+cd standalone_tts/
+python text_to_speech.py \
     --text "Welcome to the future of video generation!" \
-    --tts_voice male_1 \
-    --language en \
+    --output ../english_audio.wav
+
+# Step 2: Create video
+cd ../
+python inference.py \
+    --face examples/face/1.mp4 \
+    --audio english_audio.wav \
     --outfile english_demo.mp4
 ```
 
-### Spanish Text
+### Spanish Example
 ```bash
-python inference_with_tts.py \
-    --face examples/face/2.mp4 \
+# Step 1: Generate Spanish audio
+cd standalone_tts/
+python text_to_speech.py \
     --text "¡Bienvenido al futuro de la generación de video!" \
-    --tts_voice female_2 \
     --language es \
+    --output ../spanish_audio.wav
+
+# Step 2: Create video
+cd ../
+python inference.py \
+    --face examples/face/2.mp4 \
+    --audio spanish_audio.wav \
     --outfile spanish_demo.mp4
 ```
 
 ### Voice Cloning Example
 ```bash
-python inference_with_tts.py \
-    --face examples/face/3.mp4 \
+# Step 1: Generate cloned voice audio
+cd standalone_tts/
+python text_to_speech.py \
     --text "This is my cloned voice speaking!" \
-    --tts_voice custom \
     --speaker_wav my_voice_sample.wav \
-    --language en \
-    --outfile cloned_voice_demo.mp4
+    --output ../cloned_audio.wav
+
+# Step 2: Create video
+cd ../
+python inference.py \
+    --face examples/face/3.mp4 \
+    --audio cloned_audio.wav \
+    --outfile cloned_demo.mp4
 ```
 
 ## Troubleshooting
@@ -234,41 +245,60 @@ python inference_with_tts.py \
 4. **Long processing times**: Use GPU, reduce video resolution, or try simple TTS model
 5. **Memory issues**: Reduce batch sizes or use CPU mode
 
-## Integration with Existing Workflows
+## Deployment to SSH Server
 
-The TTS integration is backward compatible. Existing scripts using `--audio` parameter will continue to work unchanged. The new `--text` parameter provides an alternative input method.
+### Method 1: Copy Entire Directory
+```bash
+# Copy project to server
+scp -r video-retalking/ user@server:/path/to/destination/
 
-You can also use the TTS module independently:
+# SSH to server and setup
+ssh user@server
+cd /path/to/destination/video-retalking/
 
-```python
-from utils.opensource_tts import text_to_audio
+# Setup TTS environment
+cd standalone_tts/
+python -m venv tts_env
+source tts_env/bin/activate
+pip install -r requirements.txt
 
-# Generate audio file for later use
-audio_path = text_to_audio(
-    text="Your text here", 
-    voice="female_1",
-    language="en",
-    output_path="my_audio.wav"
-)
-
-# Use with original inference script
-# python inference.py --face video.mp4 --audio my_audio.wav --outfile result.mp4
+# Setup video-retalking environment
+cd ../
+python -m venv video_env  
+source video_env/bin/activate
+pip install -r requirements.txt
 ```
 
-## Model Options
+### Method 2: Separate Upload
+```bash
+# Upload TTS component
+scp -r standalone_tts/ user@server:/path/to/tts/
 
-### XTTS-v2 (Default)
-- **Pros**: Voice cloning, 17 languages, high quality
-- **Cons**: Large model (~1GB), requires speaker audio for cloning
-- **Best for**: Voice cloning, multilingual content
-
-### Simple TTS (Alternative)
-- **Pros**: Lightweight, fast setup, no speaker audio needed
-- **Cons**: English only, no voice cloning
-- **Best for**: Quick testing, English-only content
-
-```python
-# Use simple TTS instead
-from utils.simple_tts import simple_text_to_audio
-audio_path = simple_text_to_audio("Hello world")
+# Upload video-retalking component (excluding TTS files)
+rsync -av --exclude='standalone_tts/' video-retalking/ user@server:/path/to/video-retalking/
 ```
+
+## Advanced Usage
+
+### Batch Processing
+```bash
+# Generate multiple audio files
+cd standalone_tts/
+python text_to_speech.py --text "First sentence" --output ../audio1.wav
+python text_to_speech.py --text "Second sentence" --output ../audio2.wav
+python text_to_speech.py --text "Third sentence" --output ../audio3.wav
+
+# Process multiple videos
+cd ../
+python inference.py --face video1.mp4 --audio audio1.wav --outfile result1.mp4
+python inference.py --face video2.mp4 --audio audio2.wav --outfile result2.mp4
+python inference.py --face video3.mp4 --audio audio3.wav --outfile result3.mp4
+```
+
+### Environment Separation Benefits
+
+1. **No Dependency Conflicts**: TTS and video-retalking use different Python versions
+2. **Easy Deployment**: Upload components separately to different environments
+3. **Modular Updates**: Update TTS or video-retalking independently
+4. **Flexible Usage**: Use any audio source with video-retalking
+5. **Clean Development**: Work on components without version hell
