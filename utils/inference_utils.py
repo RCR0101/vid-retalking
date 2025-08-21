@@ -20,7 +20,10 @@ def options():
     parser.add_argument('--ENet_path', type=str, default='checkpoints/ENet.pth') 
     parser.add_argument('--face3d_net_path', type=str, default='checkpoints/face3d_pretrain_epoch_20.pth')                      
     parser.add_argument('--face', type=str, help='Filepath of video/image that contains faces to use', required=True)
-    parser.add_argument('--audio', type=str, help='Filepath of video/audio file to use as raw audio source', required=True)
+    parser.add_argument('--audio', type=str, help='Filepath of video/audio file to use as raw audio source')
+    parser.add_argument('--text', type=str, help='Text to convert to speech using Qwen TTS')
+    parser.add_argument('--tts_voice', type=str, default='Dylan', choices=['Cherry', 'Ethan', 'Chelsie', 'Serena', 'Dylan', 'Jada', 'Sunny'], 
+                        help='Voice for TTS synthesis (default: Dylan)')
     parser.add_argument('--exp_img', type=str, help='Expression template. neutral, smile or image path', default='neutral')
     parser.add_argument('--outfile', type=str, help='Video path to save result')
 
